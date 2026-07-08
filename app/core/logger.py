@@ -3,7 +3,7 @@
 基于loguru实现，支持.env配置控制台/文件双输出，自动生成logs/app_年月日.log
 特性：
 1. 配置驱动：通过.env开关输出、修改日志级别
-2. 自动路径：文件日志默认输出到 项目根/logs/app_YYYYMMDD.log
+2. 自动路径：文件日志默认输出到 项目根/logs/app_年月日.log
 3. 自动清理：按配置保留日志，自动删除过期文件
 4. 中文友好：utf-8编码，彻底解决中文乱码
 5. 异步安全：开启异步入队，支持多线程/异步场景，避免日志错乱
@@ -17,6 +17,9 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from loguru import logger
+
+# 强制 Python 使用 UTF-8 输出（解决 Windows GBK 环境下的 Unicode 编码错误）
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 
 # -------------------------- 第一步：加载.env配置文件 --------------------------

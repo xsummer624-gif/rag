@@ -1,3 +1,4 @@
+import json
 import sys
 from app.utils.task_utils import add_running_task, add_done_task, set_task_result
 from app.utils.sse_utils import push_to_session, SSEEvent
@@ -6,6 +7,7 @@ from app.core.logger import logger
 from app.core.load_prompt import load_prompt
 from app.lm.lm_utils import get_llm_client
 from app.clients.mongo_history_utils import save_chat_message
+from app.evaluation.ragas_metrics import full_evaluation
 import re
 
 _IMAGE_BLOCK_MARKER = "【图片】"
@@ -321,18 +323,41 @@ def node_answer_output(state: QueryGraphState) -> QueryGraphState:
 
     add_done_task(state['session_id'], sys._getframe().f_code.co_name, state.get("is_stream"))
 
-    # 阶段五: 流式输出结束，发送 final 事件 [最后兜底，确保图片都能争取渲染和结束]
+    # 阶段五: 旁路 RAG 评估（不阻塞主流程）
+    try:
+        contexts = [d.get("text", "") for d in (state.get("reranked_docs") or [])]
+        question = state.get("original_query", "")
+        answer = state.get("answer", "")
+        if answer and question:
+            scores = full_evaluation(question=question, answer=answer, contexts=contexts)
+            scores["session_id"] = state["session_id"]
+            scores["rewritten_query"] = state.get("rewritten_query", "")
+            scores["item_names"] = state.get("item_names", [])
+            save_chat_message(
+                session_id=state["session_id"],
+                role="system",
+                text=f"[RAG评估] {json.dumps(scores, ensure_ascii=False)}",
+            )
+            set_task_result(state["session_id"], "rag_scores", json.dumps(scores, ensure_ascii=False))
+            logger.info(f"[RAG评估] session={state['session_id']} 分数={scores}")
+    except Exception as e:
+        logger.warning(f"[RAG评估] 旁路评估异常(不影响主流程): {e}")
+
+    # 阶段六: 流式输出结束，发送 final 事件 [最后兜底，确保图片都能争取渲染和结束]
     logger.info(f"---发送 final 事件---图片为：{image_urls}")
     if state.get("is_stream"):
-        push_to_session(
-            state['session_id'],
-            SSEEvent.FINAL,
-            {
-                "answer": state["answer"],
-                "status": "completed",
-                "image_urls": image_urls  # 发送图片URL给前端
-            }
-        )
+        final_data = {
+            "answer": state["answer"],
+            "status": "completed",
+            "image_urls": image_urls
+        }
+        try:
+            rag_raw = get_task_result(state["session_id"], "rag_scores", "")
+            if rag_raw:
+                final_data["rag_scores"] = json.loads(rag_raw)
+        except Exception:
+            pass
+        push_to_session(state['session_id'], SSEEvent.FINAL, final_data)
 
     logger.info("---node_answer_output 节点处理结束---")
     return state

@@ -41,9 +41,9 @@ def route_after_entry(state:ImportGraphState) -> str:
     :param state: is_md_read_enabled is_pdf_read_enadled
     :return: node_pdf_to_md | node_md_img | END
     """
-    if state["is_md_read_enabled"]:
+    if state["is_pdf_read_enabled"]:
         return "node_pdf_to_md"
-    elif state["is_pdf_read_enabled"]:
+    elif state["is_md_read_enabled"]:
         return "node_md_img"
     else:
         return END

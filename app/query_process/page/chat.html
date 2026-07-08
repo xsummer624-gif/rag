@@ -172,6 +172,24 @@
     }
     .progress ul{margin:8px 0 0 18px;padding:0}
     .progress li{margin:4px 0;font-size:12px;color:#56657a}
+    details.eval-score{
+      margin-top:6px;
+      border:1px solid rgba(26,167,255,.25);
+      border-radius:12px;
+      padding:6px 10px;
+      background:rgba(26,167,255,.04);
+    }
+    details.eval-score summary{
+      cursor:pointer;
+      user-select:none;
+      color:var(--brand);
+      font-size:12px;
+    }
+    .eval-score ul{margin:6px 0 0 14px;padding:0}
+    .eval-score li{margin:3px 0;font-size:12px}
+    .eval-score .good{color:#22a67e}
+    .eval-score .fair{color:#d9a300}
+    .eval-score .poor{color:#d9534f}
 
     .answer-images{
       margin-top:10px;
@@ -545,7 +563,7 @@
       scrollToBottom();
     }
 
-    function addBotMsgWithTime(text, ts, imageUrls){
+    function addBotMsgWithTime(text, ts, imageUrls, ragScores){
       const id = 'bot-his-' + Math.random().toString(36).slice(2);
       const html = `
         <div class="msg bot" id="${id}">
@@ -561,8 +579,10 @@
       if(el){
         const answerEl = el.querySelector('.answer');
         renderAnswerWithImages(answerEl, text || '', imageUrls || []);
+        renderEvalScores(answerEl.parentElement, ragScores);
       }
       scrollToBottom();
+      return el;
     }
 
     function addBotMsgSkeleton(){
@@ -620,7 +640,32 @@
       }
     }
 
-    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls){
+    function renderEvalScores(container, scores){
+      if(!scores) return;
+      const names = {
+        faithfulness: 'Faithfulness（忠实度）',
+        answer_relevancy: 'Answer Relevancy（答案相关性）',
+        context_precision: 'Context Precision（上下文精确度）'
+      };
+      const cls = (v) => {
+        const n = Number(v);
+        if(n >= 0.8) return 'good';
+        if(n >= 0.5) return 'fair';
+        return 'poor';
+      };
+      const html = `
+        <details class="eval-score" open>
+          <summary>📊 RAG 评估分数</summary>
+          <ul>${Object.keys(names).map(k => {
+            const v = scores[k];
+            return `<li><span class="${cls(v)}">${names[k]}: ${(Number(v)*100).toFixed(1)}%</span></li>`;
+          }).join('')}</ul>
+        </details>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls, ragScores){
       const bubble = botMsgEl.querySelector('.bubble');
       const progress = botMsgEl.querySelector('details.progress');
       const err = (error || '').trim();
@@ -643,13 +688,14 @@
       const progressEl = progress ? progress : null;
       if(progressEl) {
         progressEl.remove();
-        progressEl.removeAttribute('open'); // 完成后自动收起
+        progressEl.removeAttribute('open');
       }
       bubble.textContent = '';
       const answerEl = document.createElement('div');
       answerEl.className = 'answer';
       bubble.appendChild(answerEl);
       renderAnswerWithImages(answerEl, answer || '', imageUrls || []);
+      renderEvalScores(bubble, ragScores);
       if(progressEl) bubble.appendChild(progressEl);
     }
 
@@ -673,11 +719,24 @@
         // 保留首条欢迎消息，其余先清空再渲染历史
         const nodes = Array.from(chatEl.querySelectorAll('.msg'));
         for(let i=1;i<nodes.length;i++) nodes[i].remove();
+
+        const evalRe = /^\[RAG评估\]\s*/;
+        let pendingBotEl = null;
         for(const item of items){
           if(item.role === 'user'){
             addUserMsgWithTime(item.text || '', item.ts);
+            pendingBotEl = null;
+          }else if(item.role === 'system' && evalRe.test(item.text || '')){
+            try{
+              const jsonStr = (item.text || '').replace(evalRe, '');
+              const scores = JSON.parse(jsonStr);
+              if(pendingBotEl){
+                renderEvalScores(pendingBotEl.querySelector('.bubble'), scores);
+              }
+            }catch(_){}
           }else{
-            addBotMsgWithTime(item.text || '', item.ts, item.image_urls || []);
+            const msgEl = addBotMsgWithTime(item.text || '', item.ts, item.image_urls || []);
+            pendingBotEl = msgEl;
           }
         }
         scrollToBottom();
@@ -747,9 +806,9 @@
 
         if (!isStream) {
           // 非流式：直接拿到结果
-          // data: { session_id, answer, done_list, error, message }
+          // data: { session_id, answer, done_list, error, message, rag_scores }
           renderProgress(botMsgEl, data.done_list || [], [], 'completed');
-          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || []);
+          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || [], data.rag_scores);
           sendBtn.disabled = false;
           return;
         }
@@ -808,6 +867,7 @@
             // 流式 delta 可能不包含“【图片】/图片列表”，最终包的 d.answer 才是完整答案；优先使用 d.answer
             const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
             renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
+            renderEvalScores(bubble, d.rag_scores);
           }catch(_){}
           es.close();
           sendBtn.disabled = false;
@@ -824,6 +884,7 @@
             const d = JSON.parse(e.data || '{}');
             const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
             renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
+            renderEvalScores(bubble, d.rag_scores);
           }catch(_){}
           es.close();
           sendBtn.disabled = false;

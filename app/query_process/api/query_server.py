@@ -1,4 +1,5 @@
 # 六个接口 健康状态 返回页面 发起提问 sse长连接 查看历史对话 清空历史对话
+import json
 from pathlib import Path
 import uuid
 import uvicorn
@@ -42,7 +43,11 @@ async def health():
 @app.get("/chat.html")
 async def chat_html():
     chat_html_path = PROJECT_ROOT / 'app' / 'query_process' / 'page' / 'chat.html'
-    return FileResponse(chat_html_path)
+    return FileResponse(chat_html_path, headers={
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    })
 # 发起提问
 class QueryRequest(BaseModel):
     query: str = Field(...,title="查询内容,必须传递")
@@ -109,11 +114,14 @@ async def query(background_tasks: BackgroundTasks, request: QueryRequest):
         # 同步运行
         run_query_graph(session_id, user_query, is_stream)
         answer = get_task_result(session_id, "answer", "")
+        rag_scores_raw = get_task_result(session_id, "rag_scores", "")
+        rag_scores = json.loads(rag_scores_raw) if rag_scores_raw else None
         return {
             "message": "处理完成！",
             "session_id": session_id,
             "answer": answer,
-            "done_list": []
+            "done_list": [],
+            "rag_scores": rag_scores
         }
 
 
