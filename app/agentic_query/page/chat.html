@@ -3,26 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>掌柜智库知识库</title>
+  <title>掌柜智库AI助手</title>
   <style>
     :root{
       --bg:#f3f5f7;
       --panel:#ffffff;
       --text:#1f2d3d;
       --muted:#7a869a;
-      --brand:#1aa7ff;
-      --brand2:#5b7cfa;
-      --bubble-user:#1aa7ff;
+      --brand:#7c3aed;
+      --brand2:#2563eb;
+      --bubble-user:#7c3aed;
       --bubble-bot:#ffffff;
       --border:#e6e9ef;
       --shadow:0 10px 30px rgba(31,45,61,.12);
+      --tool-bg:#f8f7ff;
+      --tool-border:#e0d8ff;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, Arial, sans-serif;
-      background: radial-gradient(1200px 600px at 20% 0%, rgba(26,167,255,.18), transparent 60%),
-                  radial-gradient(1000px 500px at 90% 10%, rgba(91,124,250,.18), transparent 55%),
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(124,58,237,.15), transparent 60%),
+                  radial-gradient(1000px 500px at 90% 10%, rgba(37,99,235,.15), transparent 55%),
                   var(--bg);
       color:var(--text);
       height:100vh;
@@ -49,7 +51,7 @@
       gap:12px;
       padding:14px 18px;
       border-bottom:1px solid var(--border);
-      background:linear-gradient(90deg, rgba(26,167,255,.10), rgba(91,124,250,.10));
+      background:linear-gradient(90deg, rgba(124,58,237,.10), rgba(37,99,235,.10));
     }
     .brand{
       display:flex;
@@ -60,7 +62,7 @@
     .logo{
       width:36px;height:36px;border-radius:10px;
       background:linear-gradient(135deg, var(--brand), var(--brand2));
-      box-shadow:0 8px 18px rgba(26,167,255,.25);
+      box-shadow:0 8px 18px rgba(124,58,237,.25);
     }
     .title{
       display:flex;
@@ -98,8 +100,8 @@
       flex:1;
       overflow:auto;
       padding:16px 14px 10px;
-      background:linear-gradient(180deg, rgba(26,167,255,.05), transparent 40%),
-                 linear-gradient(0deg, rgba(91,124,250,.05), transparent 45%);
+      background:linear-gradient(180deg, rgba(124,58,237,.05), transparent 40%),
+                 linear-gradient(0deg, rgba(37,99,235,.05), transparent 45%);
     }
     .dayline{
       text-align:center;
@@ -114,7 +116,6 @@
       align-items:flex-end;
     }
     .msg.user{justify-content:flex-end}
-    /* 关键：只让“消息内容容器”(排除头像)在 flex 中可伸缩，避免被压到“1 个字宽”导致竖排换行 */
     .msg > div:not(.avatar){
       flex:1;
       min-width:0;
@@ -132,7 +133,7 @@
       color:#3b4a5a;
       flex:0 0 auto;
     }
-    .avatar.bot{background:linear-gradient(135deg, rgba(26,167,255,.18), rgba(91,124,250,.18))}
+    .avatar.bot{background:linear-gradient(135deg, rgba(124,58,237,.18), rgba(37,99,235,.18))}
     .bubble{
       max-width:min(720px, 76%);
       display:inline-block;
@@ -157,6 +158,54 @@
       margin-top:6px;
     }
     .msg.user .meta{color:rgba(255,255,255,.85)}
+
+    /* Agent 调用链 - 极简紧凑 */
+    .agent-chain{
+      margin-top:4px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+    }
+    .agent-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:3px;
+      font-size:10px;
+      padding:1px 6px;
+      border-radius:999px;
+      background:var(--tool-bg);
+      border:1px solid var(--tool-border);
+      color:var(--brand);
+      cursor:pointer;
+      user-select:none;
+    }
+    .agent-chip:hover{background:rgba(124,58,237,.12)}
+    .agent-chip .step-num{
+      font-weight:700;
+      color:var(--brand2);
+      font-size:9px;
+    }
+    .agent-tooltip{
+      display:none;
+      position:fixed;
+      z-index:999;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:8px 10px;
+      box-shadow:0 8px 24px rgba(31,45,61,.18);
+      max-width:400px;
+      font-size:11px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      overflow-wrap:break-word;
+      max-height:300px;
+      overflow:auto;
+    }
+    .agent-tooltip.visible{display:block}
+    .agent-tooltip .tt-label{font-weight:600;color:var(--brand);margin-bottom:2px}
+    .agent-tooltip .tt-content{font-family:ui-monospace,monospace;font-size:10px;color:var(--text)}
+
     details.progress{
       margin-top:8px;
       border:1px dashed rgba(122,134,154,.45);
@@ -174,10 +223,10 @@
     .progress li{margin:4px 0;font-size:12px;color:#56657a}
     details.eval-score{
       margin-top:6px;
-      border:1px solid rgba(26,167,255,.25);
+      border:1px solid rgba(124,58,237,.25);
       border-radius:12px;
       padding:6px 10px;
-      background:rgba(26,167,255,.04);
+      background:rgba(124,58,237,.04);
     }
     details.eval-score summary{
       cursor:pointer;
@@ -250,7 +299,7 @@
       font-size:14px;
       line-height:1.5;
     }
-    textarea:focus{border-color:rgba(26,167,255,.6); box-shadow:0 0 0 3px rgba(26,167,255,.12)}
+    textarea:focus{border-color:rgba(124,58,237,.6); box-shadow:0 0 0 3px rgba(124,58,237,.12)}
     .send{
       width:88px;
       height:44px;
@@ -292,7 +341,7 @@
       border-radius:6px;
       transition:.15s;
     }
-    .nav-links a:hover{background:rgba(26,167,255,.08);color:var(--brand)}
+    .nav-links a:hover{background:rgba(124,58,237,.08);color:var(--brand)}
     .nav-links .sep{color:var(--border);font-size:10px}
   </style>
 </head>
@@ -302,8 +351,8 @@
       <div class="brand">
         <div class="logo"></div>
         <div class="title">
-          <strong>掌柜智库知识库</strong>
-          <span id="subTitle">在线 · 可查询知识库与联网信息</span>
+          <strong>掌柜智库AI助手</strong>
+          <span id="subTitle">Agent 驱动 · 自主搜索推理</span>
         </div>
       </div>
       <div class="top-actions">
@@ -318,10 +367,10 @@
     <div class="chat" id="chat">
       <div class="dayline">今天</div>
       <div class="msg bot">
-        <div class="avatar bot">掌柜智库</div>
+        <div class="avatar bot">AI</div>
         <div>
-          <div class="bubble">你好，我是掌柜智库知识库客服。你可以直接提问，我会在“阶段进度”里展示处理过程。</div>
-          <div class="meta">提示：可以问“如何使用万用表测量电压？”</div>
+          <div class="bubble">你好，我是掌柜智库AI助手。我会自主调用工具（知识库搜索、联网搜索等）来回答你的问题，并在下方展示思考过程。</div>
+          <div class="meta">提示：可以问"有哪些摄像头产品？"</div>
         </div>
       </div>
     </div>
@@ -342,8 +391,7 @@
   </div>
 
   <script>
-    // 默认同源；如你把页面单独打开（file://），可改成 http://127.0.0.1:8001
-    const API_BASE = `${location.protocol}//${location.host}`.includes('http') ? `${location.protocol}//${location.host}` : 'http://127.0.0.1:8001';
+    const API_BASE = `${location.protocol}//${location.host}`.includes('http') ? `${location.protocol}//${location.host}` : 'http://127.0.0.1:8002';
     const chatEl = document.getElementById('chat');
     const inputEl = document.getElementById('input');
     const sendBtn = document.getElementById('send');
@@ -351,11 +399,10 @@
     const btnClear = document.getElementById('btnClear');
     const streamToggle = document.getElementById('streamToggle');
 
-    // Session ID Logic
-    let sessionId = localStorage.getItem('kb_session_id');
+    let sessionId = localStorage.getItem('agent_session_id');
     if (!sessionId) {
-      sessionId = 'sess-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem('kb_session_id', sessionId);
+      sessionId = 'agent-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('agent_session_id', sessionId);
     }
 
     function scrollToBottom(){
@@ -381,14 +428,10 @@
     }
 
     function isImageUrl(url){
-      // 增加宽松度，有些 url 可能后面跟了奇怪的参数
-      // 只要包含 .jpg .png 等扩展名，且后面是 ? # 或 结束，或者被某些标点截断前
-      // 简单判断：路径部分以图片后缀结尾
       try {
         const u = new URL(url);
         return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(u.pathname);
       } catch (e) {
-        // 如果 new URL 失败（比如相对路径或非法字符），退回正则匹配
         return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url || '');
       }
     }
@@ -396,7 +439,6 @@
     function normalizeUrl(rawUrl){
       const s = String(rawUrl || '').trim();
       if(!s) return '';
-      // 尽量保留原始 URL，但把空格编码，避免 img src 失败
       return s.replace(/\s/g, '%20');
     }
 
@@ -415,19 +457,13 @@
 
     function extractUrlsLoose(text){
       const s = String(text || '');
-      // 简单正则提取：匹配 http/https 开头，直到遇到空白字符
-      // [^\s] 包含中文、特殊符号等，直到遇到换行或空格
       const regex = /(https?:\/\/[^\s]+)/g;
       const matches = s.match(regex) || [];
       const urls = [];
-      
-      // 去除首尾标点
       const trimTailPunct = (u) => String(u || '').replace(/[)\]}'">，。,;；\]】）＞]+$/g, '');
       const trimHeadPunct = (u) => String(u || '').replace(/^[<([{'"]+|^[＜（【\[]+/g, '');
-
       for(const m of matches){
         let u = trimHeadPunct(trimTailPunct(m));
-        // 简单清洗可能混入的结尾
         if(u) urls.push(u);
       }
       return dedupeKeepOrder(urls);
@@ -440,7 +476,6 @@
 
     function findLastImageMarkerIndex(raw){
       const s = String(raw || '');
-      // 支持多种写法：【图片】、【 图片 】、[图片]、[ 图片 ]
       const re = /【\s*图片\s*】|\[\s*图片\s*\]/g;
       let m;
       let lastIdx = -1;
@@ -456,26 +491,20 @@
       const raw = String(text || '');
       const { idx, len } = findLastImageMarkerIndex(raw);
       if(idx === -1) return { text: raw, images: [] };
-
       const before = raw.slice(0, idx).trimEnd();
       const after = raw.slice(idx + len).trim();
       const urls = [];
-
-      // 优先按“每行一个 URL”的方式解析，允许 URL 中包含空格
       const lines = after.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       for(const line of lines){
         if(line.startsWith('http://') || line.startsWith('https://')){
           urls.push(line);
         }else{
-          // 兼容同一行包含多个 URL 的情况
           const matches = extractUrlsLoose(line);
           for(const u of matches){
             urls.push(u);
           }
         }
       }
-
-      // 去重保序 + 过滤图片链接
       const seen = new Set();
       const images = [];
       for(const u of urls){
@@ -488,41 +517,21 @@
       return { text: before, images };
     }
 
-    function shouldShowImagesByAnswer(answerText){
-      const t = String(answerText || '');
-      // 常见“需要看图/见图/如下图”的表述
-      const keywords = [
-        '如图', '如下图', '见图', '见下图', '下图', '上图',
-        '图片', '示意图', '结构图', '外观', '接线图', '电路图', '原理图', '安装图', '尺寸图', '截图'
-      ];
-      return keywords.some(k => t.includes(k));
-    }
-
     function renderAnswerWithImages(containerEl, answerText, candidateImageUrls){
       const { text, images: imagesFromBlock } = parseAnswerAndImages(answerText);
       const candidates = Array.isArray(candidateImageUrls)
         ? candidateImageUrls.map(normalizeUrl).filter(isImageUrl)
         : [];
-      const hasBlockImages = imagesFromBlock && imagesFromBlock.length > 0;
-      
-      // 使用宽松提取
       const looseImages = extractUrlsLoose(answerText).map(normalizeUrl).filter(isImageUrl);
-      
-      // 只要后端给了候选图片，就展示（避免答案没写“如图”但用户仍需要看图）
-      // 或者从文本里提取到了图片 URL
-      const shouldShow = hasBlockImages || (candidates.length > 0) || (looseImages.length > 0);
-      
-      // 优先级：Block 显式标记 > 后端候选 > 文本宽松提取
-      // 注意：这里做个并集可能更好，防止漏掉
+      const shouldShow = (imagesFromBlock && imagesFromBlock.length > 0) || (candidates.length > 0) || (looseImages.length > 0);
       const allImages = new Set([
-          ...(hasBlockImages ? imagesFromBlock : []),
+          ...(imagesFromBlock && imagesFromBlock.length > 0 ? imagesFromBlock : []),
           ...candidates,
           ...looseImages
       ]);
       const images = Array.from(allImages);
 
       containerEl.textContent = '';
-
       if((text || '').trim().length > 0){
         const textEl = document.createElement('div');
         textEl.className = 'answer-text';
@@ -534,7 +543,6 @@
         textEl.textContent = '（已完成，但未返回答案）';
         containerEl.appendChild(textEl);
       }
-
       if(images && images.length > 0){
         const imgWrap = document.createElement('div');
         imgWrap.className = 'answer-images';
@@ -545,11 +553,8 @@
           img.src = safeUrl;
           img.alt = '参考图片';
           img.referrerPolicy = 'no-referrer';
-          img.addEventListener('error', () => {
-            img.style.display = 'none';
-          });
+          img.addEventListener('error', () => { img.style.display = 'none'; });
           imgWrap.appendChild(img);
-
           const link = document.createElement('a');
           link.href = safeUrl;
           link.target = '_blank';
@@ -559,6 +564,34 @@
         }
         containerEl.appendChild(imgWrap);
       }
+    }
+
+    function renderAgentChain(container, chain){
+      if(!chain || !Array.isArray(chain) || chain.length === 0) return;
+      const toolNames = {
+        identify_item_names: '识别商品名称',
+        search_knowledge_base: '知识库搜索',
+        search_knowledge_base_enhanced: '增强知识库搜索(HyDE)',
+        search_web: '联网搜索'
+      };
+      const html = `
+        <details class="agent-chain" open>
+          <summary>🤖 Agent 思考过程（${chain.length} 步）</summary>
+          ${chain.map((step, i) => `
+            <div class="chain-step">
+              <div class="tool-name">${toolNames[step.tool] || step.tool}</div>
+              <details>
+                <summary>查看输入 / 输出</summary>
+                <div class="io-content"><b>输入:</b> ${escapeHtml(JSON.stringify(step.input, null, 2))}</div>
+                ${step.output !== null && step.output !== undefined ? `
+                <div class="io-content" style="margin-top:4px;"><b>输出:</b> ${escapeHtml(String(step.output).slice(0, 500))}</div>
+                ` : ''}
+              </details>
+            </div>
+          `).join('')}
+        </details>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
     }
 
     function addUserMsg(text){
@@ -589,11 +622,11 @@
       scrollToBottom();
     }
 
-    function addBotMsgWithTime(text, ts, imageUrls, ragScores){
+    function addBotMsgWithTime(text, ts, imageUrls, ragScores, agentChain){
       const id = 'bot-his-' + Math.random().toString(36).slice(2);
       const html = `
         <div class="msg bot" id="${id}">
-          <div class="avatar bot">掌柜智库</div>
+          <div class="avatar bot">AI</div>
           <div>
             <div class="bubble"><div class="answer"></div></div>
             <div class="meta">${formatTime(ts)}</div>
@@ -606,6 +639,7 @@
         const answerEl = el.querySelector('.answer');
         renderAnswerWithImages(answerEl, text || '', imageUrls || []);
         renderEvalScores(answerEl.parentElement, ragScores);
+        renderAgentChain(answerEl.parentElement, agentChain);
       }
       scrollToBottom();
       return el;
@@ -615,14 +649,11 @@
       const id = 'bot-' + Math.random().toString(36).slice(2);
       const html = `
         <div class="msg bot" id="${id}">
-          <div class="avatar bot">掌柜智库</div>
+          <div class="avatar bot">AI</div>
           <div style="min-width: 180px;">
             <div class="bubble">
               <span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
-              <details class="progress" open>
-                <summary>阶段进度（等待中）</summary>
-                <ul></ul>
-              </details>
+              <span style="font-size:12px;color:var(--muted);margin-left:4px;">AI 思考中...</span>
             </div>
             <div class="meta">${nowTime()}</div>
           </div>
@@ -633,37 +664,45 @@
       return document.getElementById(id);
     }
 
-    function renderProgress(botMsgEl, doneList, runningList, status){
-      const details = botMsgEl.querySelector('details.progress');
-      const summary = details.querySelector('summary');
-      const ul = details.querySelector('ul');
-      const done = Array.isArray(doneList) ? doneList : [];
-      const running = Array.isArray(runningList) ? runningList : [];
-      const totalDone = done.length;
-      const totalRun = running.length;
-
-      const statusMap = {
-        'processing': '处理中',
-        'completed': '已完成',
-        'failed': '失败',
-        'pending': '等待中',
-      };
-      const displayStatus = statusMap[status] || status || 'unknown';
-
-      summary.textContent = `阶段进度（已完成${totalDone}，进行中${totalRun}，状态：${displayStatus}）`;
-
-      const lines = [
-        ...done.map(x => `✅ ${x}`),
-        ...running.map(x => `⏳ ${x}`)
-      ];
-      ul.innerHTML = '';
-      if(lines.length === 0){
-        ul.insertAdjacentHTML('beforeend', '<li>暂无进度</li>');
-      }else{
-        for(const line of lines){
-          ul.insertAdjacentHTML('beforeend', `<li>${escapeHtml(line)}</li>`);
-        }
-      }
+    function renderAgentChain(container, chain){
+      if(!chain || !Array.isArray(chain) || chain.length === 0) return;
+    const toolNames = {
+        topic_identification: '主题识别',
+        search_knowledge_base: '知识库',
+        search_knowledge_base_enhanced: 'HyDE搜索',
+        search_web: '联网'
+    };
+      // remove old tooltip if any
+      const oldTip = document.getElementById('agent-tooltip-global');
+      if(oldTip) oldTip.remove();
+      // create tooltip
+      const tip = document.createElement('div');
+      tip.id = 'agent-tooltip-global';
+      tip.className = 'agent-tooltip';
+      document.body.appendChild(tip);
+      const wrap = document.createElement('div');
+      wrap.className = 'agent-chain';
+      chain.forEach((step, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'agent-chip';
+        chip.innerHTML = `<span class="step-num">#${i+1}</span> ${toolNames[step.tool] || step.tool}`;
+        chip.addEventListener('mouseenter', (e) => {
+          const inp = escapeHtml(JSON.stringify(step.input, null, 2));
+          const out = step.output ? escapeHtml(String(step.output).slice(0, 300)) : '(empty)';
+          tip.innerHTML = `<div class="tt-label">⚡ ${toolNames[step.tool] || step.tool}</div>` +
+            `<div class="tt-label" style="font-size:10px;color:var(--muted);margin-top:4px;">输入</div>` +
+            `<div class="tt-content">${inp}</div>` +
+            `<div class="tt-label" style="font-size:10px;color:var(--muted);margin-top:4px;">输出</div>` +
+            `<div class="tt-content">${out}</div>`;
+          const rect = chip.getBoundingClientRect();
+          tip.style.left = Math.min(rect.left, window.innerWidth - 420) + 'px';
+          tip.style.top = (rect.bottom + 4) + 'px';
+          tip.classList.add('visible');
+        });
+        chip.addEventListener('mouseleave', () => { tip.classList.remove('visible'); });
+        wrap.appendChild(chip);
+      });
+      container.appendChild(wrap);
     }
 
     function renderEvalScores(container, scores){
@@ -691,38 +730,23 @@
       container.insertAdjacentHTML('beforeend', html);
     }
 
-    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls, ragScores){
+    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls, ragScores, agentChain){
       const bubble = botMsgEl.querySelector('.bubble');
-      const progress = botMsgEl.querySelector('details.progress');
       const err = (error || '').trim();
-
+      bubble.textContent = '';
       if(err){
-        const progressEl = progress ? progress : null;
-        if(progressEl) {
-            progressEl.remove();
-            progressEl.removeAttribute('open');
-        }
-        bubble.textContent = '';
         const errEl = document.createElement('div');
         errEl.className = 'answer';
         errEl.textContent = `抱歉，本次处理失败：\n${err}`;
         bubble.appendChild(errEl);
-        if(progressEl) bubble.appendChild(progressEl);
         return;
       }
-
-      const progressEl = progress ? progress : null;
-      if(progressEl) {
-        progressEl.remove();
-        progressEl.removeAttribute('open');
-      }
-      bubble.textContent = '';
       const answerEl = document.createElement('div');
       answerEl.className = 'answer';
       bubble.appendChild(answerEl);
       renderAnswerWithImages(answerEl, answer || '', imageUrls || []);
       renderEvalScores(bubble, ragScores);
-      if(progressEl) bubble.appendChild(progressEl);
+      renderAgentChain(bubble, agentChain);
     }
 
     async function apiHealth(){
@@ -742,7 +766,6 @@
         const data = await res.json();
         const items = Array.isArray(data.items) ? data.items : [];
         if(items.length === 0) return;
-        // 保留首条欢迎消息，其余先清空再渲染历史
         const nodes = Array.from(chatEl.querySelectorAll('.msg'));
         for(let i=1;i<nodes.length;i++) nodes[i].remove();
 
@@ -787,33 +810,7 @@
       return await res.json();
     }
 
-    async function poll(taskId, botMsgEl){
-      const typing = botMsgEl.querySelector('.typing');
-      const interval = setInterval(async () => {
-        try{
-          const res = await fetch(`${API_BASE}/status/${taskId}`);
-          const data = await res.json();
-          renderProgress(botMsgEl, data.done_list, data.running_list, data.status);
-
-          if(data.status === 'completed'){
-            if(typing) typing.remove();
-            finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || []);
-            clearInterval(interval);
-            sendBtn.disabled = false;
-          }else if(data.status === 'failed'){
-            if(typing) typing.remove();
-            finalizeBotAnswer(botMsgEl, data.answer, data.error || 'failed', data.image_urls || []);
-            clearInterval(interval);
-            sendBtn.disabled = false;
-          }
-        }catch(e){
-          // 轮询错误不立刻终止，让用户稍后重试
-        }
-      }, 1200);
-    }
-
     async function onSend(){
-      console.log('[perf] A onSend start', performance.now());
       const text = (inputEl.value || '').trim();
       if(!text) return;
       inputEl.value = '';
@@ -823,25 +820,15 @@
 
       try{
         const isStream = streamToggle.checked;
-        console.log('[perf] B submitQuery start', performance.now(), { isStream });
         const data = await submitQuery(text);
-        console.log('[perf] B submitQuery end', performance.now(), data);
-        
-        // 渲染初始状态
-        renderProgress(botMsgEl, [], [], 'pending');
 
         if (!isStream) {
-          // 非流式：直接拿到结果
-          // data: { session_id, answer, done_list, error, message, rag_scores }
-          renderProgress(botMsgEl, data.done_list || [], [], 'completed');
-          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || [], data.rag_scores);
+          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || [], data.rag_scores, data.agent_chain);
           sendBtn.disabled = false;
           return;
         }
 
-        // 流式：SSE
-        const { session_id } = data; // 此时 backend 返回 session_id
-        
+        const { session_id } = data;
         const bubble = botMsgEl.querySelector('.bubble');
         let answerEl = bubble.querySelector('.answer');
         if(!answerEl){
@@ -851,22 +838,7 @@
         }
 
         const es = new EventSource(`${API_BASE}/stream/${session_id}`);
-        console.log('[perf] C EventSource created', performance.now(), { session_id });
         let rawAnswerText = '';
-
-        es.addEventListener('progress', (e) => {
-          try{
-            const d = JSON.parse(e.data || '{}');
-            renderProgress(botMsgEl, d.done_list, d.running_list, d.status);
-            // 当进度状态已完成时，提前结束“...”等待态
-            if(d && d.status === 'completed'){
-              const typing = botMsgEl.querySelector('.typing');
-              if(typing) typing.remove();
-              // 防止后端未发送 final 导致按钮一直禁用
-              sendBtn.disabled = false;
-            }
-          }catch(_){}
-        });
 
         es.addEventListener('delta', (e) => {
           try{
@@ -874,7 +846,6 @@
             const delta = d.delta || '';
             if(delta){
               rawAnswerText += delta;
-              // 即使后端未发送 final，也尽可能在流式过程中渲染图片
               renderAnswerWithImages(answerEl, rawAnswerText, []);
               scrollToBottom();
             }
@@ -884,33 +855,13 @@
         es.addEventListener('final', (e) => {
           const typing = botMsgEl.querySelector('.typing');
           if(typing) typing.remove();
-          // 收起进度条
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-          
           try{
             const d = JSON.parse(e.data || '{}');
-            // 流式 delta 可能不包含“【图片】/图片列表”，最终包的 d.answer 才是完整答案；优先使用 d.answer
-            const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
+            const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0)
+              ? d.answer : (rawAnswerText || answerEl.textContent || '');
             renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
             renderEvalScores(bubble, d.rag_scores);
-          }catch(_){}
-          es.close();
-          sendBtn.disabled = false;
-        });
-
-        es.addEventListener('final_answer', (e) => {
-           // 响应用户的 final_answer 信号，确保图片渲染
-          const typing = botMsgEl.querySelector('.typing');
-          if(typing) typing.remove();
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-          
-          try{
-            const d = JSON.parse(e.data || '{}');
-            const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
-            renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
-            renderEvalScores(bubble, d.rag_scores);
+            renderAgentChain(bubble, d.agent_chain);
           }catch(_){}
           es.close();
           sendBtn.disabled = false;
@@ -919,10 +870,6 @@
         es.addEventListener('error', (e) => {
           const typing = botMsgEl.querySelector('.typing');
           if(typing) typing.remove();
-          // 收起进度条
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-
           try{
             const msg = e && e.data ? (JSON.parse(e.data).error || 'SSE 连接中断/失败') : 'SSE 连接中断/失败';
             rawAnswerText += `\n\n（错误：${msg}）`;
@@ -936,10 +883,9 @@
         });
       }catch(e){
         const bubble = botMsgEl.querySelector('.bubble');
-        const progress = botMsgEl.querySelector('details.progress');
         const typing = botMsgEl.querySelector('.typing');
         if(typing) typing.remove();
-        bubble.innerHTML = `请求失败：${escapeHtml(e.message || e)}\n\n` + progress.outerHTML;
+        bubble.textContent = `请求失败：${e.message || e}`;
         sendBtn.disabled = false;
       }
     }
@@ -953,7 +899,6 @@
     });
     btnClear.addEventListener('click', async () => {
       if(!confirm('确定要清空当前会话的历史记录吗？这将无法恢复。')) return;
-
       try {
         const res = await fetch(`${API_BASE}/history/${sessionId}`, { method: 'DELETE' });
         if(!res.ok) {
@@ -964,8 +909,6 @@
         console.error("Failed to clear history backend", e);
         alert('服务端清空失败，仅清空本地显示');
       }
-
-      // 清空除首条欢迎消息外的内容
       const nodes = Array.from(chatEl.querySelectorAll('.msg'));
       for(let i=1;i<nodes.length;i++) nodes[i].remove();
       scrollToBottom();
@@ -978,5 +921,3 @@
   </script>
 </body>
 </html>
-
-

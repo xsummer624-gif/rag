@@ -9,6 +9,39 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 
+def search_embedding(query: str, item_names: list[str] = None) -> list[dict]:
+    """独立函数：向量搜索知识库。query: 搜索问题; item_names: 限定商品名列表（可选）"""
+    embeddings = generate_embeddings([query])
+    dense_vec = embeddings.get("dense")[0]
+    sparse_vec = embeddings.get("sparse")[0]
+
+    collection_name = os.environ.get("CHUNKS_COLLECTION")
+    expr = None
+    if item_names:
+        quoted = ", ".join(f'"{v}"' for v in item_names)
+        expr = f"item_name in [{quoted}]"
+
+    reqs = create_hybrid_search_requests(
+        dense_vector=dense_vec,
+        sparse_vector=sparse_vec,
+        expr=expr,
+        limit=10,
+    )
+    client = get_milvus_client()
+    res = hybrid_search(
+        client=client,
+        collection_name=collection_name,
+        reqs=reqs,
+        ranker_weights=(0.8, 0.2),
+        norm_score=True,
+        limit=5,
+        output_fields=["chunk_id", "content", "item_name"],
+    )
+    results = res[0] if res else []
+    logger.info(f"向量搜索完成，检索到 {len(results)} 条相关片段")
+    return results
+
+
 def node_search_embedding(state):
     """
     核心节点函数：基于已确认商品名+改写后的用户问题，执行Milvus向量数据库混合检索
