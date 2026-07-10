@@ -43,9 +43,9 @@ images/
 *.bmp
 
 # ===== 依赖锁定文件 =====
-uv.lock
-poetry.lock
-Pipfile.lock
+# uv.lock 应该提交到 git，保证不同环境的依赖版本一致
+# poetry.lock
+# Pipfile.lock
 
 # ===== 其他 =====
 *.log

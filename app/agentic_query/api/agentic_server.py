@@ -54,14 +54,14 @@ class QueryRequest(BaseModel):
     is_stream: bool = Field(False, title="是否流式返回结果")
 
 
-def run_agentic(session_id: str, user_query: str, is_stream: bool = True):
+async def run_agentic(session_id: str, user_query: str, is_stream: bool = True):
     state = create_default_state(
         original_query=user_query,
         session_id=session_id,
         is_stream=is_stream,
     )
     try:
-        run_agentic_graph(state)
+        await run_agentic_graph(state)
     except Exception as e:
         print(f"[Agentic] 流程异常: {e}")
         update_task_status(session_id, TASK_STATUS_FAILED, is_stream)
@@ -85,7 +85,7 @@ async def query(background_tasks: BackgroundTasks, request: QueryRequest):
         background_tasks.add_task(run_agentic, session_id, user_query, is_stream)
         return {"message": "结果正在处理中...", "session_id": session_id}
     else:
-        run_agentic(session_id, user_query, is_stream)
+        await run_agentic(session_id, user_query, is_stream)
         answer = get_task_result(session_id, "answer", "")
         rag_raw = get_task_result(session_id, "rag_scores", "")
         rag_scores = json.loads(rag_raw) if rag_raw else None

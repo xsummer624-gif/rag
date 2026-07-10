@@ -45,8 +45,8 @@ def node_entry(state: ImportGraphState) -> ImportGraphState:
     else:
         logger.error(f"[{function_name}]文件格式不是md，pdf，无法继续解析")
     # 提取file_title /xxx/xx/aaa.pdf -> aaa  为了后期大模型没有识别出来当前文件item_name -> file_title 进行兜底
-        file_title = os.path.basename(local_file_path).split(".")[0]
-        state['file_title'] = file_title
+    file_title = os.path.basename(local_file_path).split(".")[0]
+    state['file_title'] = file_title
     # 4.结束节点的日志输出【节点 + 核心参数】
     function_name = sys._getframe().f_code.co_name
     logger.info(f">>>[{function_name}]开始结束了！现在的状态为 : {state}")
