@@ -123,7 +123,7 @@ DualRAG/
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/xsummer624-gif/DualRAG.git
+git clone https://github.com/xsummer624/DualRAG.git
 cd DualRAG
 ```
 
